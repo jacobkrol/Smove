@@ -1,0 +1,491 @@
+<html>
+    
+    <!--
+     
+     Game Over -- better alert for the user
+     Panel in HTML to right for controls
+     
+     -->
+    
+    <style>
+        
+        #gc {
+            margin-top: 40px;
+        }
+    
+    .scoreboard p {
+        display: inline-block;
+        margin: 5px 0px;;
+        font-size: 60px;
+        font-weight: bold;
+        font-family: Arial, Helvetica, sans-serif;
+        color: darkblue;
+    }
+    
+    .scoreboard {
+        width: 600px;
+        margin: 0 auto;
+        margin-top: 30px;
+        text-align: left;
+        margin-bottom: -20px;
+    }
+    
+    .scoreback {
+        margin-left: 20px;
+        padding-left: 30px;
+        background: rgba(255,255,255,0.7);
+        width: 320px;;
+        border: 3px solid black;
+    }
+    
+    
+        </style>
+    
+    <body style="background-image: url('Gray Suede.jpg')">
+        
+        <div class="scoreboard">
+            <div class="scoreback">
+                <p>Score: </p>
+                <p id="score">...</p>
+            </div>
+        </div>
+        
+        <center>
+            <canvas id="gc" width="600" height="600" ></canvas>
+        </center>
+        
+        <script>
+            window.onload=function() {
+                canv=document.getElementById("gc");
+                ctx=canv.getContext("2d");
+                document.addEventListener("keydown",keyPush);
+                t0 = performance.now();
+                tlevelup = t0;
+                setInterval(main,1000/fps);
+            }
+        
+        function randInt(min,max) {
+            return Math.floor( Math.random() * (max+1-min) ) + min;
+        }
+        
+        var table = new function() {
+            this.space = 80;
+            this.thick = 8;
+            this.margin = ( 600 - this.space*3 - this.thick*2 ) / 2;
+        }
+        
+        var char = new function() {
+            this.x = 1;
+            this.y = 1;
+            this.score = 0;
+            
+            this.hit = function() {
+                for(var i=0; i<enemies.length; i++) {
+                    if(en.location(i)[0] == char.x && en.location(i)[1] == char.y) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        
+        var candy = new function() {
+            this.x = -10;
+            this.y = -10;
+            this.margin = table.space / 3.5;
+        }
+        
+        /*new function() {
+         do {
+         this.x = randInt(0,2);
+         this.y = randInt(0,2);
+         this.margin = table.space / 3.5;
+         } while(this.x == char.x && this.y == char.y);
+         }*/
+        
+        var fps = 80;
+        var enemies = [];
+        var running = true;
+        var first = true;
+        var colors = ["#800090", "#000090", "#009090", "#009000", "#d09000", "#900000", "#ff00ff", "#ff0000"];
+        var levelUp = true;
+        var levelUpShow = true;
+        var levelSize = 20;
+        
+        var en = new function() {
+            this.r = table.space/2 - table.space/3;
+            this.rate = 2000;
+            this.speed = 160/fps;
+            this.level = 1;
+            
+            this.make = function(speed) {
+                row = randInt(0,2);
+                col = randInt(0,2);
+                sideSource = randInt(0,3);
+                switch(sideSource) {
+                    case 0:
+                    x = this.r+20;
+                    y = table.margin+table.space*(row+0.5)+table.thick*row;
+                    break;
+                    case 1:
+                    x = table.margin+table.space*(col+0.5)+table.thick*col;
+                    y = this.r+20;
+                    break;
+                    case 2:
+                    x = canv.width - (this.r+20);
+                    y = table.margin+table.space*(row+0.5)+table.thick*row;
+                    break;
+                    case 3:
+                    x = table.margin+table.space*(col+0.5)+table.thick*col;
+                    y = canv.height - (this.r+20);
+                    break;
+                }
+                //var color = rgb( 255, Math.floor( (7-this.level)/6*170 ), Math.floor( (7-this.level)/6*170 ));
+                var color = colors[this.level-1];
+                if(this.level>8) {
+                    var speedLevel = randInt(0,4+2*(this.level-8));
+                    speedLevel = 4*(speedLevel>4) + speedLevel*(speedLevel<=4);
+                    var tempSpeed = 160/fps+speedLevel*40/fps;
+                    enemies.push([x,y,sideSource,tempSpeed,colors[speedLevel+3]]);
+                } else {
+                    enemies.push([x,y,sideSource,speed,color]);
+                }
+            }
+            
+            this.update = function() {
+                var i = 0;
+                for(var i=0; i<enemies.length; i++) {
+                    switch(enemies[i][2]) {
+                        case 0:
+                        enemies[i][0] += enemies[i][3];
+                        break;
+                        case 1:
+                        enemies[i][1] += enemies[i][3];
+                        break;
+                        case 2:
+                        enemies[i][0] += -enemies[i][3];
+                        break;
+                        case 3:
+                        enemies[i][1] += -enemies[i][3];
+                        break;
+                    }
+                    if(enemies[i][0] > canv.width-(this.r+10) || enemies[i][1] > canv.height-(this.r+10) || enemies[i][0] < this.r+10 || enemies[i][1] < this.r+10) {
+                        enemies.splice(i,1);
+                        i++;
+                    }
+                }
+            }
+            
+            this.show = function() {
+                for(var i=0; i<enemies.length; i++) {
+                    r = table.space/2 - table.space/3;
+                    ctx.beginPath();
+                    ctx.arc(enemies[i][0],enemies[i][1],r,0,2*Math.PI);
+                    ctx.fillStyle = enemies[i][4];
+                    ctx.fill();
+                }
+            }
+            
+            this.location = function(n) {
+                x = 10;
+                y = 10;
+                
+                if(enemies[n][0] < table.margin+table.space-this.r && enemies[n][0] > table.margin+this.r) {
+                    x = 0;
+                } else if(enemies[n][0] < table.margin+table.space*2+table.thick-this.r && enemies[n][0] > table.margin+table.space+table.thick+this.r) {
+                    x = 1;
+                } else if(enemies[n][0] < table.margin+table.space*3+table.thick*2-this.r && enemies[n][0] > table.margin+table.space*2+table.thick*2+this.r) {
+                    x = 2;
+                } else {
+                    x = 3;
+                }
+                
+                if(enemies[n][1] < table.margin+table.space-this.r && enemies[n][1] > table.margin+this.r) {
+                    y = 0;
+                } else if(enemies[n][1] < table.margin+table.space*2+table.thick-this.r && enemies[n][1] > table.margin+table.space+table.thick+this.r) {
+                    y = 1;
+                } else if(enemies[n][1] < table.margin+table.space*3+table.thick*2-this.r && enemies[n][1] > table.margin+table.space*2+table.thick*2+this.r) {
+                    y = 2;
+                } else {
+                    y = 3;
+                }
+                
+                return [x,y]
+                
+            }
+            
+        }
+        
+        function collectCandy() {
+            return char.x == candy.x && char.y == candy.y;
+        }
+        
+        function calcAngle() {
+            tnow = performance.now();
+            var turnSpeed = 4000;
+            return ( tnow % turnSpeed )/turnSpeed * 2*Math.PI;
+        }
+        
+        
+        function main() {
+            
+            //Print Background
+            ctx.fillStyle = "whitesmoke";
+            ctx.fillRect(8,8,canv.width-16,canv.height-16);
+            ctx.strokeStyle = "black";
+            for(var i=1; i<9; i+=3) {
+                ctx.beginPath();
+                ctx.rect(i,i,canv.width-2*i,canv.height-2*i);
+                ctx.stroke();
+            }
+            
+            //Vertical Lines
+            for(var i=0; i<2; i++) {
+                for(var j=0; j<table.thick; j+=2) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = "gray";
+                    ctx.moveTo( table.margin+table.space*(i+1)+table.thick*i+j, table.margin );
+                    ctx.lineTo( table.margin+table.space*(i+1)+table.thick*i+j, canv.height - table.margin );
+                    ctx.stroke();
+                }
+            }
+            
+            //Horizontal Lines
+            for(var i=0; i<2; i++) {
+                for(var j=0; j<table.thick; j+=2) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = "gray";
+                    ctx.moveTo( table.margin, table.margin+table.space*(i+1)+table.thick*i+j );
+                    ctx.lineTo( canv.width - table.margin, table.margin+table.space*(i+1)+table.thick*i+j );
+                    ctx.stroke();
+                }
+            }
+            
+            //Border
+            var rborder = 20;
+            ctx.beginPath();
+            ctx.fillStyle="gray";
+            ctx.fillRect(table.margin-2*table.thick, table.margin+rborder-table.thick, table.thick, table.space*3+table.thick*4-2*rborder); //left
+            ctx.fillRect(table.margin+rborder-table.thick, table.margin-2*table.thick, table.space*3+table.thick*4-2*rborder, table.thick); //top
+            ctx.fillRect(table.margin+3*table.space+3*table.thick,  table.margin+rborder-table.thick, table.thick,  table.space*3+table.thick*4-2*rborder); //right
+            ctx.fillRect(table.margin+rborder-table.thick, table.margin+3*table.space+3*table.thick, table.space*3+table.thick*4-2*rborder, table.thick); //bottom
+            for(var j=0; j<2; j++) {
+                for(var i=0; i<table.thick; i++) {
+                    ctx.beginPath();
+                    ctx.arc(table.margin+rborder-table.thick,table.margin+rborder-table.thick,rborder+i,Math.PI,3*Math.PI/2);
+                    ctx.stroke();
+                }
+                for(var i=0; i<table.thick; i++) {
+                    ctx.beginPath();
+                    ctx.arc(table.margin+3*table.space+3*table.thick-rborder, table.margin+rborder-table.thick, rborder+i, 3*Math.PI/2,0);
+                    ctx.stroke();
+                }
+                for(var i=0; i<table.thick; i++) {
+                    ctx.beginPath();
+                    ctx.arc(table.margin+3*table.space+3*table.thick-rborder, table.margin+3*table.space+3*table.thick-rborder, rborder+i,0,Math.PI/2);
+                    ctx.stroke();
+                }
+                for(var i=0; i<table.thick; i++) {
+                    ctx.beginPath();
+                    ctx.arc(table.margin+rborder-table.thick,table.margin+3*table.space+3*table.thick-rborder,rborder+i,Math.PI/2,Math.PI);
+                    ctx.stroke();
+                }
+            }
+            
+            
+            //Print Character
+            var circleThick = 14;
+            ctx.strokeStyle="blue";
+            for(var i=circleThick; i>0; i-=1) {
+                ctx.beginPath();
+                x = table.margin+table.space*(char.x+0.5)+table.thick*(char.x);
+                y = table.margin+table.space*(char.y+0.5)+table.thick*(char.y);
+                r = table.space / 2 - 8 - i;
+                ctx.arc(x,y,r,0,2*Math.PI);
+                ctx.stroke();
+            }
+            x = table.margin+table.space*(char.x+0.5)+table.thick*(char.x);
+            y = table.margin+table.space*(char.y+0.5)+table.thick*(char.y);
+            r = table.space / 2 - 8 - circleThick;
+            ctx.beginPath();
+            ctx.arc(x,y,r,0,2*Math.PI);
+            ctx.fillStyle="skyblue";
+            ctx.fill();
+            
+            //Print Candy
+            ctx.beginPath();
+            ctx.strokeStyle="gold";
+            var angle = calcAngle();
+            var radius = (table.space-(table.space-candy.margin*2)*Math.sqrt(2))/2;
+            ctx.moveTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle));
+            ctx.lineTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle+Math.PI/2), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle+Math.PI/2));
+            ctx.lineTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle+Math.PI), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle+Math.PI));
+            ctx.lineTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle+3*Math.PI/2), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle+3*Math.PI/2));
+            ctx.lineTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle));
+            /* STANDARD SQUARE
+             ctx.moveTo(table.margin+table.space*candy.x+table.thick*candy.x+candy.margin, table.margin+table.space*candy.y+table.thick*candy.y+candy.margin);
+             ctx.lineTo(table.margin+table.space*(candy.x+1)+table.thick*candy.x-candy.margin, table.margin+table.space*candy.y+table.thick*candy.y+candy.margin);
+             ctx.lineTo(table.margin+table.space*(candy.x+1)+table.thick*candy.x-candy.margin, table.margin+table.space*(candy.y+1)+table.thick*candy.y-candy.margin);
+             ctx.lineTo(table.margin+table.space*candy.x+table.thick*candy.x+candy.margin, table.margin+table.space*(candy.y+1)+table.thick*candy.y-candy.margin);
+             ctx.lineTo(table.margin+table.space*candy.x+table.thick*candy.x+candy.margin, table.margin+table.space*candy.y+table.thick*candy.y+candy.margin);
+             */
+            ctx.stroke();
+            ctx.fillStyle="gold";
+            ctx.fill();
+            if(char.score%levelSize==levelSize-1) {
+                ctx.beginPath();
+                ctx.strokeStyle="orange";
+                for(var i=0; i<5; i++) {
+                    radius = (table.space-(table.space-candy.margin*2)*Math.sqrt(2)+i+12)/2;
+                    ctx.moveTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle));
+                    ctx.lineTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle+Math.PI/2), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle+Math.PI/2));
+                    ctx.lineTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle+Math.PI), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle+Math.PI));
+                    ctx.lineTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle+3*Math.PI/2), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle+3*Math.PI/2));
+                    ctx.lineTo(table.margin+table.space*(candy.x+0.5)+table.thick*candy.x+radius*Math.cos(angle), table.margin+table.space*(candy.y+0.5)+table.thick*candy.y+radius*Math.sin(angle));
+                    ctx.stroke();
+                }
+            }
+            
+            
+            
+            //Print Score
+            document.getElementById("score").innerHTML = char.score;
+            
+            //Update Enemies
+            if(running) {
+                en.update();
+            }
+            en.show();
+            
+            if(char.hit()) {
+                if(running) {
+                    new Audio("game over.wav").play();
+                }
+                running = false;
+                ctx.fillStyle = "gray";
+                ctx.font = "bold italic 30pt Arial";
+                ctx.fillText("Press Enter to Restart",30,canv.height - 30);
+            }
+            
+            t1 = performance.now();
+            if(t1-t0 > en.rate && running && !levelUp) {
+                t0 = t1;
+                en.make(en.speed);
+            }
+            if(char.score%levelSize == 0 && first == true && char.score > 0) {
+                if(en.rate > 800) {
+                    en.rate += -400;
+                    en.level++;
+                    levelUp = true;
+                    levelUpShow = false;
+                } else if(en.level<8) {
+                    en.speed += 40/fps;
+                    en.level++;
+                    levelUp = true;
+                    levelUpShow = false;
+                } else if(en.level==8 || en.level==9){
+                    en.level++;
+                    en.rate += -100;
+                    levelUp = true;
+                    levelUpShow = false;
+                }
+                first = false;
+            }
+            
+            //LevelUp
+            if(levelUp && enemies.length<2) {
+                if(levelUpShow == false) {
+                    tlevelup = performance.now();
+                    new Audio("level up.wav").play();
+                }
+                levelUpShow = true;
+                if( performance.now() - tlevelup < 1500) {
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(table.margin+table.space*0.3+1,table.margin+table.space*1.1+table.thick+1,table.space*2.4+table.thick*2-2,table.space*0.8-2);
+                    ctx.beginPath();
+                    ctx.strokeStyle="black";
+                    ctx.rect(table.margin+table.space*0.3,table.margin+table.space*1.1+table.thick,table.space*2.4+table.thick*2,table.space*0.8);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = "gray";
+                    ctx.font = "bold 30pt Arial";
+                    if(en.level<10) {
+                        ctx.fillText("Level "+en.level,table.margin+table.space*0.65+table.thick,table.margin+table.space*1.65+table.thick);
+                    } else {
+                        ctx.font = "bold 28pt Arial";
+                        ctx.fillText("Final Level",table.margin+table.space*0.3+table.thick,table.margin+table.space*1.55+table.thick);
+                        ctx.font = "bold 14pt Arial";
+                        ctx.fillText("Good Luck",table.margin+table.space*0.9+table.thick, table.margin+table.space*1.8+table.thick);
+                    }
+                } else if(performance.now() - tlevelup > 2000){
+                    levelUp = false;
+                    do {
+                        candy.x = randInt(0,2);
+                        candy.y = randInt(0,2);
+                    } while (candy.x==char.x && candy.y==char.y);
+                }
+                
+            }
+            
+            //Make New Candy if Collected
+            if(collectCandy()) {
+                if( char.score%levelSize==levelSize-1 && en.level <10 ) {
+                    candy.x = -10;
+                    candy.y = -10;
+                } else {
+                    do {
+                        candy.x = randInt(0,2);
+                        candy.y = randInt(0,2);
+                    } while (candy.x==char.x && candy.y==char.y);
+                }
+                new Audio("coin.wav").play();
+                char.score++;
+                first = true;
+            }
+            
+        }
+        
+        function keyPush(evt) {
+            if(running) {
+                switch(evt.keyCode) {
+                    case 37:
+                    char.x += -(char.x>0);
+                    break;
+                    case 38:
+                    char.y += -(char.y>0);
+                    break;
+                    case 39:
+                    char.x += char.x<2;
+                    break;
+                    case 40:
+                    char.y += char.y<2;
+                    break;
+                }
+            }
+            if(evt.keyCode == 13) {
+                if(!running) {
+                    enemies = [];
+                    running = true;
+                    char.x = 1;
+                    char.y = 1;
+                    char.score = 0;
+                    en.level = 1;
+                    en.rate = 2000;
+                    en.speed = 160/fps;
+                    levelUp = true;
+                    levelUpShow = true;
+                    candy.x = -10;
+                    candy.y = -10;
+                    tlevelup = performance.now();
+                }
+            }
+            if(evt.keyCode == 80) {
+                running = !running;
+            }
+        }
+        
+            </script>
+        
+    </body>
+</html>
+
